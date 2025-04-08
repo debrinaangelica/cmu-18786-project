@@ -8,7 +8,7 @@ def get_tweet_dataset(filename):
     return tweets
 
 def _append_sentiment_analysis(dataset):
-    analyzer = SentimentIntensityAnalyzer(lexicon_file="data/nltk_data/sentiment/vader_lexicon.zip/vader_lexicon/vader_lexicon.txt")
+    analyzer = SentimentIntensityAnalyzer(lexicon_file="data/sentiment/vader_lexicon.zip/vader_lexicon/vader_lexicon.txt")
     for t in dataset["text"]:
         # Hashtags are not taken into consideration by analyzer.polarity_scores
         t = t.replace("#", "")
