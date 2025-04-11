@@ -12,8 +12,23 @@ output_dim = 1
 # Sample from: 
 # https://www.kaggle.com/code/taronzakaryan/predicting-stock-price-using-lstm-model-pytorch
 class LSTM(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, output_dim):
+    def __init__(self, input_dim=3, hidden_dim=64, num_layers=1, output_dim=1):
         super(LSTM, self).__init__()
+        """
+        sequence length --> window size (number of days to consider)
+        input features --> input_dim=3: 
+            - open price (normalized with the function from paper#1)
+            - closing price (normalized with the function from paper#1)
+            - sentiment score
+            - # of tweets for this day
+        maybe also:
+            - trade volume for the day
+            - other prices (opening, %change, highest, adjusted close)
+
+        output features --> output_dim=1:
+            - %change of the next day
+        """
+        
         # Hidden dimensions
         self.hidden_dim = hidden_dim
 
@@ -23,7 +38,7 @@ class LSTM(nn.Module):
         # batch_first: If True, then the input and output tensors are provided 
         # as (batch, seq, feature) instead of (seq, batch, feature). 
         # Note that this does not apply to hidden or cell states. 
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)        
 
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
@@ -40,9 +55,6 @@ class LSTM(nn.Module):
         out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
 
         # Index hidden state of last time step
-        # out.size() --> 100, 32, 100
-        # out[:, -1, :] --> 100, 100 --> just want last time step hidden states! 
         out = self.fc(out[:, -1, :]) 
-        # out.size() --> 100, 10
         return out
     
