@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 import data as dataset
 from model import LSTM
@@ -61,7 +62,7 @@ def main():
     
     best_valid_loss = None
     
-    for epoch in range(num_epochs):
+    for epoch in tqdm(range(num_epochs), desc="Training epochs"):
         model.train()
         total_loss = 0.0
         total_valid_loss = 0.0
@@ -101,6 +102,8 @@ def main():
         if epoch % 100 == 0:
             logger.info('Epoch %d: Train RMSE %.4f, Valid RMSE %.4f', epoch, train_rmse[-1], valid_rmse[-1])
 
+            # Update tqdm's description with current metrics; using tqdm.write writes outside the progress bar.
+            tqdm.write(f"Epoch {epoch}: Train RMSE {train_rmse[-1]:.4f}, Valid RMSE {valid_rmse[-1]:.4f}")
 
     # Test - Load the best model params to run test
     model.load_state_dict(torch.load("model_params/model.params", map_location=device))
