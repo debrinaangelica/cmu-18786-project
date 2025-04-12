@@ -71,3 +71,22 @@ print("Saved to tweets_with_finbert_sentiment.csv")
 
 # See sentiment distribution
 print(df["sentiment"].value_counts())
+
+# Get daily summary csv
+df["date"] = pd.to_datetime(df["date"])
+
+df["day"] = df["date"].dt.date
+
+# Group by day and compute the required stats
+daily_summary = df.groupby("day").agg({
+    "sentiment_score": "mean",
+    "prob_negative": "mean",
+    "prob_neutral": "mean",
+    "prob_positive": "mean",
+    "text": "count" # number of tweets
+}).reset_index()
+
+daily_summary = daily_summary.rename(columns={"text": "tweet_count"})
+daily_summary.to_csv("daily_sentiment_summary.csv", index=False)
+
+print("Saved daily summary to daily_sentiment_summary.csv")
