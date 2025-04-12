@@ -137,6 +137,7 @@ def plot_loss(losses, title='Training Loss'):
     plt.grid(True)
     title = f"{title}\n(epoch: {len(losses)}, loss: {round(losses[-1], 2)})"
     plt.title(title)
+    plt.show()
 
 if __name__ == "__main__":
     main()
