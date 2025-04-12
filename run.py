@@ -46,7 +46,7 @@ def main():
     model = LSTM(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, num_layers=num_layers)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    model = model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.MSELoss()
@@ -69,8 +69,8 @@ def main():
         total_valid_loss = 0.0
 
         for data, y_true in train_loader:
-            data.to(device)
-            y_true.to(device)
+            data = data.to(device)
+            y_true = y_true.to(device)
             optimizer.zero_grad()
             y_pred = model(data)
             loss = criterion(y_pred, y_true)
@@ -87,8 +87,8 @@ def main():
             model.eval()
             with torch.no_grad():
                 for data, y_true in val_loader:
-                    data.to(device)
-                    y_true.to(device)
+                    data = data.to(device)
+                    y_true = y_true.to(device)
                     y_pred = model(data)
                     valid_loss = criterion(y_pred, y_true)
 
@@ -112,8 +112,8 @@ def main():
     total_test_loss = 0.0
     with torch.no_grad():
         for data, true in test_loader:
-            data.to(device)
-            true.to(device)
+            data = data.to(device)
+            true = true.to(device)
             y_pred = model(data)
             test_loss = criterion(y_pred, y_true)
 
