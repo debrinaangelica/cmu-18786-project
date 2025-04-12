@@ -130,10 +130,15 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # Extract only the 'date' and 'change_close_to_close' columns from the stock data
     stock_subset = stock_df[['date', 'change_close_to_close']]
 
-    # Merge the sentiment data with the selected stock data on the 'date' column.
-    # A left merge ensures all rows from sentiment_df are kept, and the corresponding 
-    # change_close_to_close value is appended.
-    dataset = pd.merge(sentiment_df, stock_subset, on='date', how='left')
+    # # Merge the sentiment data with the selected stock data on the 'date' column.
+    # # A left merge ensures all rows from sentiment_df are kept, and the corresponding 
+    # # change_close_to_close value is appended.
+    # dataset = pd.merge(sentiment_df, stock_subset, on='date', how='left')
+
+    # Merge using an inner join so that only rows with matching dates in both datasets remain.
+    # NOTE: no stock data on weekends
+    # TODO: consider averaging sentiment data over the weekend so that we don't completely ignore them.
+    dataset = pd.merge(sentiment_df, stock_subset, on='date', how='inner')
 
     # Get rid of 'date' column
     dataset.drop('date', axis=1, inplace=True)
