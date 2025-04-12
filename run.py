@@ -131,8 +131,8 @@ def main():
 # Plotting Functions
 def plot_loss(losses, title='Training Loss'):
     plt.plot(losses, label=title)
-    plt.set_xlabel('epoch')
-    plt.set_ylabel('rmse loss')
+    plt.xlabel('epoch')
+    plt.ylabel('rmse loss')
     plt.legend()
     plt.grid(True)
     title = f"{title}\n(epoch: {len(losses)}, loss: {round(losses[-1], 2)})"
