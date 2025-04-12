@@ -111,9 +111,9 @@ def main():
     model.eval()
     total_test_loss = 0.0
     with torch.no_grad():
-        for data, true in test_loader:
+        for data, y_true in test_loader:
             data = data.to(device)
-            true = true.to(device)
+            y_true = y_true.to(device)
             y_pred = model(data)
             test_loss = criterion(y_pred, y_true)
 
