@@ -21,7 +21,7 @@ class LSTMDataset(Dataset):
 
     def __len__(self):
         # number of sequences = total days - window size
-        return len(self.data) - self.sequence_length
+        return len(self.X) - self.sequence_length
 
     def __getitem__(self, idx):
         """
@@ -140,7 +140,7 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # Convert to tensor
     data_tensor = torch.tensor(dataset.values, dtype=torch.float32)
     # Split data and labels
-    X = data_tensor[:, :-1]
+    X = data_tensor
     y = data_tensor[:, -1]
 
     data_len = len(X) 

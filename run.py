@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     # === Hyperparameters ===
-    input_dim = 4
+    input_dim = 3
     hidden_dim = 50
     output_dim = 1
     num_layers = 1
