@@ -12,11 +12,11 @@ output_dim = 1
 # Sample from: 
 # https://www.kaggle.com/code/taronzakaryan/predicting-stock-price-using-lstm-model-pytorch
 class LSTM(nn.Module):
-    def __init__(self, input_dim=3, hidden_dim=64, num_layers=1, output_dim=1):
+    def __init__(self, input_dim=4, hidden_dim=64, num_layers=1, output_dim=1):
         super(LSTM, self).__init__()
         """
         sequence length --> window size (number of days to consider)
-        input features --> input_dim=3: 
+        input features --> input_dim=4: 
             - open price (normalized with the function from paper#1)
             - closing price (normalized with the function from paper#1)
             - sentiment score
@@ -44,11 +44,12 @@ class LSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
+        batch_size = x.size(0)
         # Initialize hidden state with zeros
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
+        h0 = torch.zeros(self.num_layers, batch_size, self.hidden_dim, device=x.device).requires_grad_()
 
         # Initialize cell state
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
+        c0 = torch.zeros(self.num_layers, batch_size, self.hidden_dim, device=x.device).requires_grad_()
 
         # We need to detach as we are doing truncated backpropagation through time (BPTT)
         # If we don't, we'll backprop all the way to the start even after going through another batch

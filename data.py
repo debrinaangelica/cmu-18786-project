@@ -1,12 +1,46 @@
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import numpy as np
 import pandas as pd
 import torch
 
 import yfinance as yf
 import pandas as pd
+import stock
+
+from torch.utils.data import Dataset, DataLoader
+
+# Define a custom dataset class
+class LSTMDataset(Dataset):
+    def __init__(self, data, sequence_length=50):
+        """
+        data: all the data (for the entire time period)
+        """
+        self.sequence_length = sequence_length
+        self.data = data
+
+    def __len__(self):
+        # number of sequences = total days - window size
+        return len(self.data) - self.sequence_length
+
+    def __getitem__(self, idx):
+        """
+        For each index, returns:
+          - x: a sequence of days of shape (sequence_length, num_features)
+          - y: the label for the day immediately following the sequence. For example,
+               using the closing price (assumed to be the first feature) as the label.
+        """
+        # Extract sequence length datapoints at a time
+        x = self.data[idx : idx + self.sequence_length]
+        # Label is the closing price of the day after the sequence.
+        y = self.data[idx + self.sequence_length][0]
+        
+        x = torch.tensor(x, dtype=torch.float32)
+        y = torch.tensor(y, dtype=torch.float32)
+        
+        return x, y
 
 
-def get_stock_data(ticker_symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+def DEPRECATED_get_stock_data(ticker_symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
     """
     Fetch historical data from Yahoo Finance for a given ticker symbol between start_date and end_date.
     Applies min-max normalization to the 'Open', 'Close', and 'Volume' columns.
@@ -41,7 +75,7 @@ def get_stock_data(ticker_symbol: str, start_date: str, end_date: str) -> pd.Dat
     return data
 
 
-def create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.csv', lookback=10):
+def create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.csv', sequence_length=50, data_splits=(70,20,10)):
     """Transform a time series into a prediction dataset
     
     Args:
@@ -55,29 +89,30 @@ def create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.
     #   3. compile this to one dataset
 
     # Stock data
-    stock_data = get_stock_data('TSLA', start_date='2023-01-01', end_date='2024-01-01')
+    # TODO: update this to use mingkai's stock.py version
+    stock_data = stock.get_stock_data('TSLA', start_date='2023-01-01', end_date='2024-01-01')
     close_prices = stock_data['Close']
     open_prices = stock_data['Open']
-    trade_volumes = stock_data['Volume'] # don't need this
+    trade_volumes = stock_data['Volume'] # don't need this (?)
+    
     # Tweet data (sentiment)
-    polarities = []
+    daily_averaged_sentiment_scores = []
     daily_tweet_counts = []
 
+    dataset = np.stack((close_prices, open_prices, daily_averaged_sentiment_scores, daily_tweet_counts), axis=1)
 
+    data_len = len(dataset) 
+    split_train = int(data_len * (data_splits[0]/100)) # end index of train split
+    split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
+    return LSTMDataset(dataset[:split_train], sequence_length), LSTMDataset(dataset[split_train:split_valid], sequence_length), LSTMDataset(dataset[split_valid:], sequence_length)
 
-    X, y = [], []
-    for i in range(len(dataset)-lookback):
-        feature = dataset[i:i+lookback]
-        target = dataset[i+1:i+lookback+1]
-        X.append(feature)
-        y.append(target)
-    return torch.tensor(X), torch.tensor(y)
 
 def get_tweet_dataset(filename):
     tweets = pd.read_csv(filename)
     tweets = tweets[["date", "text"]]
     tweets = _append_sentiment_analysis(tweets)
     return tweets
+
 
 def _append_sentiment_analysis(dataset):
     analyzer = SentimentIntensityAnalyzer(lexicon_file="data/sentiment/vader_lexicon.zip/vader_lexicon/vader_lexicon.txt")
