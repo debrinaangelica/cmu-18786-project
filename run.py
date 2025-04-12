@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 def main():
     # === Hyperparameters ===
-    input_dim = 0
-    hidden_dim = 0
-    output_dim = 0
-    num_layers = 0
+    input_dim = 4
+    hidden_dim = 50
+    output_dim = 1
+    num_layers = 1
 
     num_epochs = 2000
     batch_size = 16
