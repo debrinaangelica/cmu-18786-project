@@ -35,6 +35,7 @@ def main():
     learning_rate = 0.001
 
     data_splits = (70,20,10) # train/validation/test :: 70/20/10
+    sequence_length = 20
     # =======================
 
     # Architecture:
@@ -50,7 +51,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.MSELoss()
     
-    train_data, valid_data, test_data = dataset.create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=50, data_splits=data_splits)
+    train_data, valid_data, test_data = dataset.create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=sequence_length, data_splits=data_splits)
     
     train_loader = DataLoader(train_data, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(valid_data, shuffle=False, batch_size=batch_size)

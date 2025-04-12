@@ -11,17 +11,26 @@ from torch.utils.data import Dataset, DataLoader
 
 # Define a custom dataset class
 class LSTMDataset(Dataset):
-    def __init__(self, X, y, sequence_length=50):
+    def __init__(self, X, y, sequence_length=50, logger=None):
         """
         data: all the data (for the entire time period)
         """
         self.sequence_length = sequence_length
         self.X = X
         self.y = y
+        self.logger = logger
 
     def __len__(self):
         # number of sequences = total days - window size
-        return len(self.X) - self.sequence_length
+        # 
+        length = len(self.X) - self.sequence_length
+        if length < 0:
+            if self.logger is not None:
+                self.logger.warning(f"Dataset length ({len(self.X)}) is less than window size ({self.sequence_length})")
+            print(f"Dataset length ({len(self.X)}) is less than window size ({self.sequence_length})")
+            return 0
+
+        return length
 
     def __getitem__(self, idx):
         """
