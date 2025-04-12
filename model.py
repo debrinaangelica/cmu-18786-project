@@ -1,16 +1,6 @@
 import torch
 import torch.nn as nn
 
-# Build model
-#####################
-input_dim = 1
-hidden_dim = 32
-num_layers = 2 
-output_dim = 1
-
-
-# Sample from: 
-# https://www.kaggle.com/code/taronzakaryan/predicting-stock-price-using-lstm-model-pytorch
 class LSTM(nn.Module):
     def __init__(self, input_dim=4, hidden_dim=64, num_layers=1, output_dim=1):
         super(LSTM, self).__init__()

@@ -11,12 +11,13 @@ from torch.utils.data import Dataset, DataLoader
 
 # Define a custom dataset class
 class LSTMDataset(Dataset):
-    def __init__(self, data, sequence_length=50):
+    def __init__(self, X, y, sequence_length=50):
         """
         data: all the data (for the entire time period)
         """
         self.sequence_length = sequence_length
-        self.data = data
+        self.X = X
+        self.y = y
 
     def __len__(self):
         # number of sequences = total days - window size
@@ -30,9 +31,9 @@ class LSTMDataset(Dataset):
                using the closing price (assumed to be the first feature) as the label.
         """
         # Extract sequence length datapoints at a time
-        x = self.data[idx : idx + self.sequence_length]
+        x = self.X[idx : idx + self.sequence_length]
         # Label is the closing price of the day after the sequence.
-        y = self.data[idx + self.sequence_length][0]
+        y = self.y[idx + self.sequence_length]
         
         x = torch.tensor(x, dtype=torch.float32)
         y = torch.tensor(y, dtype=torch.float32)
@@ -75,7 +76,7 @@ def DEPRECATED_get_stock_data(ticker_symbol: str, start_date: str, end_date: str
     return data
 
 
-def create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.csv', sequence_length=50, data_splits=(70,20,10)):
+def DEPRECATED_create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.csv', sequence_length=50, data_splits=(70,20,10)):
     """Transform a time series into a prediction dataset
     
     Args:
@@ -106,6 +107,46 @@ def create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.
     split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
     return LSTMDataset(dataset[:split_train], sequence_length), LSTMDataset(dataset[split_train:split_valid], sequence_length), LSTMDataset(dataset[split_valid:], sequence_length)
 
+def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=50, data_splits=(70,20,10)):
+    # Define file paths (adjust these paths as necessary)
+    stock_csv = 'data/stock/tsla.csv'
+
+    # Load the sentiment CSV file, parsing the 'date' column as datetime objects
+    sentiment_df = pd.read_csv(tweet_data_src, parse_dates=['day'])
+    sentiment_df.rename(columns={'day': 'date'}, inplace=True)
+
+    # Load the stock CSV file, also parsing the 'date' column
+    stock_df = pd.read_csv(stock_csv, parse_dates=['date'])
+
+    # Extract only the 'date' and 'change_close_to_close' columns from the stock data
+    stock_subset = stock_df[['date', 'change_close_to_close']]
+
+    # Merge the sentiment data with the selected stock data on the 'date' column.
+    # A left merge ensures all rows from sentiment_df are kept, and the corresponding 
+    # change_close_to_close value is appended.
+    dataset = pd.merge(sentiment_df, stock_subset, on='date', how='left')
+
+    # Get rid of 'date' column
+    dataset.drop('date', axis=1, inplace=True)
+
+    # TODO: Temporarily don't use the prob_negative,prob_neutral,prob_positive columns
+    dataset.drop('prob_negative', axis=1, inplace=True)
+    dataset.drop('prob_neutral', axis=1, inplace=True)
+    dataset.drop('prob_positive', axis=1, inplace=True)
+
+    # Save so we can check whether the formatting is correct
+    dataset.to_csv("current_dataset.csv", index=False)
+
+    # Convert to tensor
+    data_tensor = torch.tensor(dataset.values, dtype=torch.float32)
+    # Split data and labels
+    X = data_tensor[:, :-1]
+    y = data_tensor[:, -1]
+
+    data_len = len(X) 
+    split_train = int(data_len * (data_splits[0]/100)) # end index of train split
+    split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
+    return LSTMDataset(X[:split_train], y[:split_train], sequence_length), LSTMDataset(X[split_train:split_valid], y[split_train:split_valid], sequence_length), LSTMDataset(X[split_valid:], y[split_valid:], sequence_length)
 
 def get_tweet_dataset(filename):
     tweets = pd.read_csv(filename)

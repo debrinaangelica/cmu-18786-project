@@ -1,8 +1,13 @@
 import yfinance as yf
 import pandas as pd
 
-def get_stock_data(ticker="TSLA"):
-    df = yf.download(ticker, interval="1d")
+def get_stock_data(ticker="TSLA", start_date='2023-01-01', end_date='2023-12-01'):
+    """
+        start_date (str): The start date in 'YYYY-MM-DD' format (e.g., '2023-01-01').
+        end_date (str): The end date in 'YYYY-MM-DD' format (e.g., '2023-06-01').
+    """
+    df = yf.download(ticker, interval="1d", start_date=start_date, end_date=end_date)
+
     df.columns = df.columns.droplevel(-1)  # Remove random second header row
     df = df.rename(columns={
         "Close": "close",
