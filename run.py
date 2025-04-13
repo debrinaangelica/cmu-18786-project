@@ -121,15 +121,15 @@ def main():
         test_rmse = np.sqrt(total_test_loss / len(test_data))
 
     # Plot Train Loss
-    plot_loss(train_rmse, 'Training Loss')
+    plot_loss(train_rmse, 'Training Loss', save_name='train_loss.png')
     # Plot Validation Loss
-    plot_loss(valid_rmse, 'Validation Loss')
+    plot_loss(valid_rmse, 'Validation Loss', save_name='validation_loss.png')
     # Print Test Loss
     print(f"Test Loss: {round(test_rmse, 2)}")
     logger.info(f"Test Loss: {round(test_rmse, 2)}")
 
 # Plotting Functions
-def plot_loss(losses, title='Training Loss'):
+def plot_loss(losses, title='Training Loss', save_name='plot_loss.png'):
     plt.plot(losses, label=title)
     plt.xlabel('epoch')
     plt.ylabel('rmse loss')
@@ -138,7 +138,7 @@ def plot_loss(losses, title='Training Loss'):
     title = f"{title}\n(epoch: {len(losses)}, loss: {round(losses[-1], 2)})"
     plt.title(title)
     # plt.show()
-    plt.savefig("plot_loss.png")
+    plt.savefig(save_name)
 
 if __name__ == "__main__":
     main()
