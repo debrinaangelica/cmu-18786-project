@@ -43,7 +43,7 @@ def sentiment_score(text):
   return sentiment_score, probs[0], probs[1], probs[2]
 
 # Run sentiment analysis
-df["sentiment_result"] = df["text"].apply(lambda x: finbert(x)[0])
+df["sentiment_result"] = df["Text"].apply(lambda x: finbert(x)[0])
 df["sentiment"] = df["sentiment_result"].apply(lambda x: x['label'])
 df["confidence"] = df["sentiment_result"].apply(lambda x: x['score'])
 
@@ -53,7 +53,7 @@ neg_probs = []
 neu_probs = []
 pos_probs = []
 
-for tweet in tqdm(df["text"], desc="Analyzing tweets"):
+for tweet in tqdm(df["Text"], desc="Analyzing tweets"):
     score, pos, neg, neu = sentiment_score(tweet)
     scores.append(score)
     neg_probs.append(neg)
@@ -73,9 +73,9 @@ print("Saved to tweets_with_finbert_sentiment.csv")
 print(df["sentiment"].value_counts())
 
 # Get daily summary csv
-df["date"] = pd.to_datetime(df["date"])
+df["Datetime"] = pd.to_datetime(df["Datetime"])
 
-df["day"] = df["date"].dt.date
+df["day"] = df["Datetime"].dt.date
 
 # Group by day and compute the required stats
 daily_summary = df.groupby("day").agg({
@@ -83,7 +83,7 @@ daily_summary = df.groupby("day").agg({
     "prob_negative": "mean",
     "prob_neutral": "mean",
     "prob_positive": "mean",
-    "text": "count" # number of tweets
+    "Text": "count" # number of tweets
 }).reset_index()
 
 daily_summary = daily_summary.rename(columns={"text": "tweet_count"})
