@@ -160,7 +160,7 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     data_len = len(X) 
     split_train = int(data_len * (data_splits[0]/100)) # end index of train split
     split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
-    return LSTMDataset(X[:split_train], y[:split_train], sequence_length), LSTMDataset(X[split_train:split_valid], y[split_train:split_valid], sequence_length), LSTMDataset(X[split_valid:], y[split_valid:], sequence_length)
+    return LSTMDataset(X[:split_train], y[:split_train], sequence_length), LSTMDataset(X[split_train-sequence_length:split_valid], y[split_train-sequence_length:split_valid], sequence_length), LSTMDataset(X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
 
 def get_tweet_dataset(filename):
     tweets = pd.read_csv(filename)
