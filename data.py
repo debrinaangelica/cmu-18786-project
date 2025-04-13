@@ -141,7 +141,7 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # TODO: consider averaging sentiment data over the weekend so that we don't completely ignore them.
     dataset = pd.merge(sentiment_df, stock_subset, on='date', how='inner')
 
-    date_tensor = torch.tensor(dataset['date'].to_numpy())
+    date_array = dataset['date'].to_numpy()
 
     # Get rid of 'date' column
     dataset.drop('date', axis=1, inplace=True)
@@ -164,9 +164,9 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     split_train = int(data_len * (data_splits[0]/100)) # end index of train split
     split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
     
-    train_data = LSTMDataset(date_tensor[:split_train], X[:split_train], y[:split_train], sequence_length)
-    val_data = LSTMDataset(date_tensor[split_train-sequence_length:split_valid], X[split_train-sequence_length:split_valid], y[split_train-sequence_length:split_valid], sequence_length)
-    test_data = LSTMDataset(date_tensor[split_valid-sequence_length:], X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
+    train_data = LSTMDataset(date_array[:split_train], X[:split_train], y[:split_train], sequence_length)
+    val_data = LSTMDataset(date_array[split_train-sequence_length:split_valid], X[split_train-sequence_length:split_valid], y[split_train-sequence_length:split_valid], sequence_length)
+    test_data = LSTMDataset(date_array[split_valid-sequence_length:], X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
 
     return train_data, val_data, test_data
 def get_tweet_dataset(filename):
