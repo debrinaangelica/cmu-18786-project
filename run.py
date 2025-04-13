@@ -123,7 +123,7 @@ def main():
         test_rmse = np.sqrt(total_test_loss / len(test_data))
 
     # Plot Train Loss
-    plot_loss(train_rmse, 'Training Loss', save_name='train_loss.png')
+    plot_loss(train_rmse, None, 'Training Loss', save_name='train_loss.png')
     # Plot Validation Loss
     plot_loss(valid_rmse, valid_rmse_epochs, 'Validation Loss', save_name='validation_loss.png')
     # Print Test Loss
@@ -132,6 +132,7 @@ def main():
 
 # Plotting Functions
 def plot_loss(losses, x_axis_values=None, title='Training Loss', save_name='plot_loss.png'):
+    plt.figure()
     if x_axis_values is not None:
         plt.plot(x_axis_values, losses, label=title)
     else:
@@ -144,6 +145,7 @@ def plot_loss(losses, x_axis_values=None, title='Training Loss', save_name='plot
     plt.title(title)
     # plt.show()
     plt.savefig(save_name)
+    plt.close()
 
 if __name__ == "__main__":
     main()
