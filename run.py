@@ -58,6 +58,7 @@ def main():
     test_loader = DataLoader(test_data, shuffle=False, batch_size=batch_size)
 
     train_rmse = [] # train rmse
+    valid_rmse_epochs = [] # x-axis values for valid_rmse
     valid_rmse = [] # validation rmse
     test_rmse = 0.0 # test rsme
     
@@ -94,6 +95,7 @@ def main():
 
                     total_valid_loss += valid_loss.item() * data.size(0)
                 valid_loss = total_valid_loss / len(valid_data)
+                valid_rmse_epochs.append(epoch)
                 valid_rmse.append(np.sqrt(valid_loss))
                 if best_valid_loss == None or valid_loss < best_valid_loss:
                     best_valid_loss = valid_loss
@@ -123,14 +125,17 @@ def main():
     # Plot Train Loss
     plot_loss(train_rmse, 'Training Loss', save_name='train_loss.png')
     # Plot Validation Loss
-    plot_loss(valid_rmse, 'Validation Loss', save_name='validation_loss.png')
+    plot_loss(valid_rmse, valid_rmse_epochs, 'Validation Loss', save_name='validation_loss.png')
     # Print Test Loss
     print(f"Test Loss: {round(test_rmse, 2)}")
     logger.info(f"Test Loss: {round(test_rmse, 2)}")
 
 # Plotting Functions
-def plot_loss(losses, title='Training Loss', save_name='plot_loss.png'):
-    plt.plot(losses, label=title)
+def plot_loss(losses, x_axis_values=None, title='Training Loss', save_name='plot_loss.png'):
+    if x_axis_values is not None:
+        plt.plot(x_axis_values, losses, label=title)
+    else:
+        plt.plot(losses, label=title)
     plt.xlabel('epoch')
     plt.ylabel('rmse loss')
     plt.legend()
