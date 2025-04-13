@@ -11,10 +11,11 @@ from torch.utils.data import Dataset, DataLoader
 
 # Define a custom dataset class
 class LSTMDataset(Dataset):
-    def __init__(self, X, y, sequence_length=50, logger=None):
+    def __init__(self, dates, X, y, sequence_length=50, logger=None):
         """
         data: all the data (for the entire time period)
         """
+        self.dates = dates
         self.sequence_length = sequence_length
         self.X = X
         self.y = y
@@ -140,6 +141,8 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # TODO: consider averaging sentiment data over the weekend so that we don't completely ignore them.
     dataset = pd.merge(sentiment_df, stock_subset, on='date', how='inner')
 
+    date_tensor = torch.tensor(dataset['date'].to_numpy())
+
     # Get rid of 'date' column
     dataset.drop('date', axis=1, inplace=True)
 
@@ -160,8 +163,12 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     data_len = len(X) 
     split_train = int(data_len * (data_splits[0]/100)) # end index of train split
     split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
-    return LSTMDataset(X[:split_train], y[:split_train], sequence_length), LSTMDataset(X[split_train-sequence_length:split_valid], y[split_train-sequence_length:split_valid], sequence_length), LSTMDataset(X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
+    
+    train_data = LSTMDataset(date_tensor[:split_train], X[:split_train], y[:split_train], sequence_length)
+    val_data = LSTMDataset(date_tensor[split_train-sequence_length:split_valid], X[split_train-sequence_length:split_valid], y[split_train-sequence_length:split_valid], sequence_length)
+    test_data = LSTMDataset(date_tensor[split_valid-sequence_length:], X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
 
+    return train_data, val_data, test_data
 def get_tweet_dataset(filename):
     tweets = pd.read_csv(filename)
     tweets = tweets[["date", "text"]]
