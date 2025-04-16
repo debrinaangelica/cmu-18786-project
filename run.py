@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     # === Hyperparameters ===
-    input_dim = 3
+    input_dim = 4
     hidden_dim = 50
     output_dim = 1
     num_layers = 1
@@ -35,7 +35,7 @@ def main():
     learning_rate = 0.001
 
     data_splits = (70,20,10) # train/validation/test :: 70/20/10
-    sequence_length = 20
+    sequence_length = 50
     # =======================
 
     # Architecture:
@@ -52,7 +52,7 @@ def main():
     criterion = nn.MSELoss()
     
     train_data, valid_data, test_data = dataset.create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=sequence_length, data_splits=data_splits)
-    
+
     train_loader = DataLoader(train_data, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(valid_data, shuffle=False, batch_size=batch_size)
     test_loader = DataLoader(test_data, shuffle=False, batch_size=batch_size)

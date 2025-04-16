@@ -129,7 +129,7 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     stock_df = pd.read_csv(stock_csv, parse_dates=['date'])
 
     # Extract only the 'date' and 'change_close_to_close' columns from the stock data
-    stock_subset = stock_df[['date', 'change_close_to_close']]
+    stock_subset = stock_df[['date', 'open', 'close', 'change_close_to_close']]
 
     # # Merge the sentiment data with the selected stock data on the 'date' column.
     # # A left merge ensures all rows from sentiment_df are kept, and the corresponding 
@@ -157,7 +157,7 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # Convert to tensor
     data_tensor = torch.tensor(dataset.values, dtype=torch.float32)
     # Split data and labels
-    X = data_tensor
+    X = data_tensor[:, :-1]
     y = data_tensor[:, -1]
 
     data_len = len(X) 
@@ -169,6 +169,7 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     test_data = LSTMDataset(date_array[split_valid-sequence_length:], X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
 
     return train_data, val_data, test_data
+
 def get_tweet_dataset(filename):
     tweets = pd.read_csv(filename)
     tweets = tweets[["date", "text"]]
