@@ -15,7 +15,6 @@ def get_stock_data(ticker="TSLA", start_date='2023-01-01', end_date='2023-12-01'
         "Low": "low",
         "Open": "open",
         "Volume": "volume",
-        "Adj Close": "adj close"
     })
     df.index.name = "date"
     df.index = pd.to_datetime(df.index)
