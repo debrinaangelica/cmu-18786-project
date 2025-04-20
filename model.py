@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class LSTM(nn.Module):
-    def __init__(self, input_dim=4, hidden_dim=64, num_layers=1, output_dim=1):
+    def __init__(self, input_dim=4, hidden_dim=64, num_layers=1, dropout=0.2, output_dim=1):
         super(LSTM, self).__init__()
         """
         sequence length --> window size (number of days to consider)
@@ -28,7 +28,7 @@ class LSTM(nn.Module):
         # batch_first: If True, then the input and output tensors are provided 
         # as (batch, seq, feature) instead of (seq, batch, feature). 
         # Note that this does not apply to hidden or cell states. 
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)        
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, dropout=dropout, batch_first=True)        
 
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)

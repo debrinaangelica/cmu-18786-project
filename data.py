@@ -129,7 +129,8 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     stock_df = pd.read_csv(stock_csv, parse_dates=['date'])
 
     # Extract only the 'date' and 'change_close_to_close' columns from the stock data
-    stock_subset = stock_df[['date', 'open', 'close', 'change_close_to_close']]
+    stock_subset = stock_df[['date', 'open_minmax', 'close_minmax']]
+    y_values = stock_df[['date', 'close']]
 
     # # Merge the sentiment data with the selected stock data on the 'date' column.
     # # A left merge ensures all rows from sentiment_df are kept, and the corresponding 
@@ -139,7 +140,8 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # Merge using an inner join so that only rows with matching dates in both datasets remain.
     # NOTE: no stock data on weekends
     # TODO: consider averaging sentiment data over the weekend so that we don't completely ignore them.
-    dataset = pd.merge(sentiment_df, stock_subset, on='date', how='inner')
+    dataset = pd.merge(stock_subset, sentiment_df, on='date', how='inner')
+    dataset = pd.merge(dataset, y_values, on='date', how='inner')
 
     date_array = dataset['date'].to_numpy()
 

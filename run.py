@@ -26,16 +26,17 @@ logger = logging.getLogger(__name__)
 def main():
     # === Hyperparameters ===
     input_dim = 4
-    hidden_dim = 50
+    hidden_dim = 64
     output_dim = 1
-    num_layers = 1
+    num_layers = 3
+    dropout = 0.2
 
     num_epochs = 2000
     batch_size = 16
-    learning_rate = 0.001
+    learning_rate = 0.1e-3
 
     data_splits = (70,20,10) # train/validation/test :: 70/20/10
-    sequence_length = 50
+    sequence_length = 30
     # =======================
 
     # Architecture:
@@ -43,13 +44,14 @@ def main():
     #   - loss function: l2, mae, 
     #   - optimizer: adam?
 
-    model = LSTM(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, num_layers=num_layers)
+    model = LSTM(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, num_layers=num_layers, dropout=dropout)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = nn.MSELoss()
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=200, T_mult=1, eta_min=1e-7)
+    criterion = nn.SmoothL1Loss()
     
     train_data, valid_data, test_data = dataset.create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=sequence_length, data_splits=data_splits)
 
@@ -71,17 +73,19 @@ def main():
 
         for data, y_true in train_loader:
             data = data.to(device)
-            y_true = y_true.to(device)
+            y_true = y_true.to(device).unsqueeze(1)
             optimizer.zero_grad()
             y_pred = model(data)
             loss = criterion(y_pred, y_true)
             loss.backward()
             optimizer.step()
 
+            scheduler.step()
+
             total_loss += loss.item() * data.size(0)
         
         train_loss = total_loss / len(train_data)
-        train_rmse.append(np.sqrt(train_loss))
+        train_rmse.append((train_loss))
 
         # Validation
         if epoch % 100 == 0:
@@ -89,14 +93,14 @@ def main():
             with torch.no_grad():
                 for data, y_true in val_loader:
                     data = data.to(device)
-                    y_true = y_true.to(device)
+                    y_true = y_true.to(device).unsqueeze(1)
                     y_pred = model(data)
                     valid_loss = criterion(y_pred, y_true)
 
                     total_valid_loss += valid_loss.item() * data.size(0)
                 valid_loss = total_valid_loss / len(valid_data)
                 valid_rmse_epochs.append(epoch)
-                valid_rmse.append(np.sqrt(valid_loss))
+                valid_rmse.append(valid_loss)
                 if best_valid_loss == None or valid_loss < best_valid_loss:
                     best_valid_loss = valid_loss
                     # Save the model params
@@ -115,12 +119,12 @@ def main():
     with torch.no_grad():
         for data, y_true in test_loader:
             data = data.to(device)
-            y_true = y_true.to(device)
+            y_true = y_true.to(device).unsqueeze(1)
             y_pred = model(data)
             test_loss = criterion(y_pred, y_true)
 
             total_test_loss += test_loss.item() * data.size(0)
-        test_rmse = np.sqrt(total_test_loss / len(test_data))
+        test_rmse = total_test_loss / len(test_data)
 
     # Plot Train Loss
     plot_loss(train_rmse, None, 'Training Loss', save_name='train_loss.png')
@@ -138,7 +142,7 @@ def plot_loss(losses, x_axis_values=None, title='Training Loss', save_name='plot
     else:
         plt.plot(losses, label=title)
     plt.xlabel('epoch')
-    plt.ylabel('rmse loss')
+    plt.ylabel('mae loss')
     plt.legend()
     plt.grid(True)
     title = f"{title}\n(epoch: {len(losses)}, loss: {round(losses[-1], 2)})"
