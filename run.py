@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     # === Hyperparameters ===
-    input_dim = 4
+    # input_dim = 4
     hidden_dim = 64
     output_dim = 1
     num_layers = 3
@@ -38,6 +39,25 @@ def main():
 
     data_splits = (70,20,10) # train/validation/test :: 70/20/10
     sequence_length = 30
+
+    train_data, valid_data, test_data = dataset.create_dataset_vader(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=sequence_length, data_splits=data_splits)
+
+    input_dim = train_data.get_input_dim()
+
+    # Print hyperparameters
+    print(f"=== Hyperparameters ===")
+    print(f"Input Dimension: {input_dim}")
+    print(f"Hidden Dimension: {hidden_dim}")
+    print(f"Output Dimension: {output_dim}")
+    print(f"Number of Layers: {num_layers}")
+    print(f"Dropout: {dropout}")
+    print(f"Number of Epochs: {num_epochs}")
+    print(f"Batch Size: {batch_size}")
+    print(f"Learning Rate: {learning_rate}")
+    print(f"Data Splits (Train/Validation/Test): {data_splits}")
+    print(f"Sequence Length: {sequence_length}")
+    print(f"=======================")
+
     # =======================
 
     # Architecture:
@@ -54,7 +74,6 @@ def main():
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=200, T_mult=1, eta_min=1e-7)
     criterion = nn.SmoothL1Loss()
     
-    train_data, valid_data, test_data = dataset.create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=sequence_length, data_splits=data_splits)
 
     train_loader = DataLoader(train_data, shuffle=True, batch_size=batch_size)
     val_loader = DataLoader(valid_data, shuffle=False, batch_size=batch_size)
@@ -105,7 +124,7 @@ def main():
                 if best_valid_loss == None or valid_loss < best_valid_loss:
                     best_valid_loss = valid_loss
                     # Save the model params
-                    torch.save(model.state_dict(), "model_params/model.params")
+                    torch.save(model.state_dict(), "model_params_vader/model.params")
                 
         if epoch % 100 == 0:
             logger.info('Epoch %d: Train RMSE %.4f, Valid RMSE %.4f', epoch, train_rmse[-1], valid_rmse[-1])
@@ -114,7 +133,7 @@ def main():
             tqdm.write(f"Epoch {epoch}: Train RMSE {train_rmse[-1]:.4f}, Valid RMSE {valid_rmse[-1]:.4f}")
 
     # Test - Load the best model params to run test
-    model.load_state_dict(torch.load("model_params/model.params", map_location=device))
+    model.load_state_dict(torch.load("model_params_vader/model.params", map_location=device))
     model.eval()
     total_test_loss = 0.0
     with torch.no_grad():
@@ -128,29 +147,12 @@ def main():
         test_rmse = total_test_loss / len(test_data)
 
     # Plot Train Loss
-    plot_loss(train_rmse, None, 'Training Loss', save_name='train_loss.png')
+    plot_loss(train_rmse, None, 'Training Loss', save_name='train_loss_vader.png')
     # Plot Validation Loss
-    plot_loss(valid_rmse, valid_rmse_epochs, 'Validation Loss', save_name='validation_loss.png')
+    plot_loss(valid_rmse, valid_rmse_epochs, 'Validation Loss', save_name='validation_loss_vader.png')
     # Print Test Loss
     print(f"Test Loss: {round(test_rmse, 2)}")
     logger.info(f"Test Loss: {round(test_rmse, 2)}")
-
-# Plotting Functions
-def plot_loss(losses, x_axis_values=None, title='Training Loss', save_name='plot_loss.png'):
-    plt.figure()
-    if x_axis_values is not None:
-        plt.plot(x_axis_values, losses, label=title)
-    else:
-        plt.plot(losses, label=title)
-    plt.xlabel('epoch')
-    plt.ylabel('mae loss')
-    plt.legend()
-    plt.grid(True)
-    title = f"{title}\n(epoch: {len(losses)}, loss: {round(losses[-1], 2)})"
-    plt.title(title)
-    # plt.show()
-    plt.savefig(save_name)
-    plt.close()
 
 if __name__ == "__main__":
     main()

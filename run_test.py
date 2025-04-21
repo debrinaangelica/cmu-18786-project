@@ -13,13 +13,11 @@ from plotters import plot_predictions
 def main():
     # === Hyperparameters ===
     input_dim = 3
-    hidden_dim = 50
+    hidden_dim = 64
     output_dim = 1
-    num_layers = 1
+    num_layers = 3
 
-    num_epochs = 2000
     batch_size = 16
-    learning_rate = 0.001
 
     data_splits = (70,20,10) # train/validation/test :: 70/20/10
     sequence_length = 20
@@ -39,6 +37,8 @@ def main():
 
     train_data, valid_data, test_data = dataset.create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=sequence_length, data_splits=data_splits)
     
+    input_dim = test_data.get_input_dim()
+
     test_loader = DataLoader(test_data, shuffle=False, batch_size=batch_size)
 
     test_rmse = 0.0 # test rsme
@@ -46,7 +46,7 @@ def main():
 
 
     # Test - Load the best model params to run test
-    model.load_state_dict(torch.load("model_params/model.params", map_location=device))
+    model.load_state_dict(torch.load("model_params_vader/model.params", map_location=device))
     model.eval()
     total_test_loss = 0.0
     with torch.no_grad():
@@ -64,7 +64,7 @@ def main():
 
     predictions = np.concatenate(test_predictions, axis=0)
     
-    plot_predictions(y_true=test_data.y, y_pred=predictions, test_rmse=test_rmse)
+    plot_predictions(y_true=test_data.y, y_pred=predictions, test_rmse=test_rmse, save_name='predictions_vader.png')
 
     # Print Test Loss
     print(f"Test Loss: {round(test_rmse, 2)}")
