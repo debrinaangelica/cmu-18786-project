@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 import data as dataset
 from model import LSTM
+from plotters import plot_predictions
 
 def main():
     # === Hyperparameters ===
@@ -68,17 +69,6 @@ def main():
     # Print Test Loss
     print(f"Test Loss: {round(test_rmse, 2)}")
 
-# Plotting Functions
-def plot_predictions(y_true, y_pred, test_rmse):
-    plt.plot(y_true, label="percent change")
-    plt.plot(y_pred, label="predicted percent change")
-    plt.xlabel('time')
-    plt.ylabel('percent change')
-    plt.legend()
-    plt.grid(True)
-    title = f"Test Predictions vs. True Stock Percent Change (rmse={test_rmse})"
-    plt.title(title)
-    plt.show()
 
 if __name__ == "__main__":
     main()

@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+
+from plotters import plot_loss
 import data as dataset
 from model import LSTM
 import logging

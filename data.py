@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 
 # Define a custom dataset class
 class LSTMDataset(Dataset):
-    def __init__(self, dates, X, y, sequence_length=50, logger=None):
+    def __init__(self, dates, X, y, sequence_length=50, stock_close_prices=[], logger=None):
         """
         data: all the data (for the entire time period)
         """
@@ -19,6 +19,7 @@ class LSTMDataset(Dataset):
         self.sequence_length = sequence_length
         self.X = X
         self.y = y
+        self.stock_close_prices = stock_close_prices
         self.logger = logger
 
     def __len__(self):
@@ -85,7 +86,6 @@ def DEPRECATED_get_stock_data(ticker_symbol: str, start_date: str, end_date: str
 
     return data
 
-
 def DEPRECATED_create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.csv', sequence_length=50, data_splits=(70,20,10)):
     """Transform a time series into a prediction dataset
     
@@ -143,10 +143,15 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     dataset = pd.merge(stock_subset, sentiment_df, on='date', how='inner')
     dataset = pd.merge(dataset, y_values, on='date', how='inner')
 
+    # Get close prices (for plotting predictions later on)
+    stock_close_prices = dataset['close'].to_numpy()
+
     date_array = dataset['date'].to_numpy()
 
     # Get rid of 'date' column
     dataset.drop('date', axis=1, inplace=True)
+    # Get rid of 'close' column (not used as input)
+    dataset.drop('close', axis=1, inplace=True)
 
     # TODO: Temporarily don't use the prob_negative,prob_neutral,prob_positive columns
     dataset.drop('prob_negative', axis=1, inplace=True)
@@ -189,6 +194,19 @@ def _append_sentiment_analysis(dataset):
         dataset["scores_neu"] = analyzer.polarity_scores(t)["neu"]
         dataset["scores_compound"] = analyzer.polarity_scores(t)["compound"]
     return dataset
+
+def get_close_prices_from_percent_changes(y_true_close, y_pred_percent_change):
+    """
+    the dates for y_true_close should lag y_pred_percent_change by 1 day
+    """
+    assert len(y_true_close) == len(y_pred_percent_change)
+
+    y_pred_close = []
+    for i, y in enumerate(y_true_close):
+        y_pred_close.append(round(y*(1+y_pred_percent_change[i]), 2))
+
+    return y_pred_close
+
 
 def main():
     tweets = get_tweet_dataset("data/tweets/elon_musk_tweets.csv")
