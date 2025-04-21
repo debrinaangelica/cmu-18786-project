@@ -191,16 +191,15 @@ def create_dataset_vader(tweet_data_src='data/sentiment/daily_sentiment_summary_
     # Load the stock CSV file, also parsing the 'date' column
     stock_df = pd.read_csv(stock_csv, parse_dates=['date'])
 
-    # Extract only the 'date' and 'change_close_to_close' columns from the stock data
-    stock_subset = stock_df[['date', 'open_minmax', 'close_minmax']]
-    y_values = stock_df[['date', 'close']]
+    # Extract 'date', 'open', 'close' columns from the stock data
+    stock_subset = stock_df[['date', 'open', 'close', 'open_minmax', 'close_minmax']]
+    y_values = stock_df[['date', 'close']]  # We are predicting 'close' prices
 
     # Merge using an inner join so that only rows with matching dates in both datasets remain.
     dataset = pd.merge(stock_subset, sentiment_df, on='date', how='inner')
     dataset = pd.merge(dataset, y_values, on='date', how='inner')
 
     # Handle missing dates in the stock data (weekends, holidays, etc.)
-    # Create a copy of the dataset to keep track of the sentiment and stock data
     final_dataset = []
     last_sentiment = None  # To store the last valid sentiment for missing days
     last_stock_data = None  # To store the last valid stock data for missing days
@@ -211,15 +210,14 @@ def create_dataset_vader(tweet_data_src='data/sentiment/daily_sentiment_summary_
         if last_sentiment is None or not pd.isna(row['open_minmax']):
             final_dataset.append(row)
             last_sentiment = row[['sentiment_score', 'prob_negative', 'prob_neutral', 'prob_positive']].copy()
-            last_stock_data = row[['open_minmax', 'close_minmax']].copy()
+            last_stock_data = row[['open', 'close', 'open_minmax', 'close_minmax']].copy()  # Include open and close prices
             sentiment_count = 1  # Reset the count as we've encountered valid stock data
         else:
             # Average sentiment scores if the current day doesn't have stock data (weekend/holiday)
             sentiment_count += 1
-            # Average the sentiment values over the missing days
             last_sentiment = (last_sentiment * (sentiment_count - 1) + row[['sentiment_score', 'prob_negative', 'prob_neutral', 'prob_positive']]) / sentiment_count
             row[['sentiment_score', 'prob_negative', 'prob_neutral', 'prob_positive']] = last_sentiment
-            row[['open_minmax', 'close_minmax']] = last_stock_data  # Use the last available stock data
+            row[['open', 'close', 'open_minmax', 'close_minmax']] = last_stock_data  # Use the last available stock data
             final_dataset.append(row)
 
     # Convert final_dataset back to a DataFrame
@@ -232,21 +230,22 @@ def create_dataset_vader(tweet_data_src='data/sentiment/daily_sentiment_summary_
     # Get rid of 'date' column
     final_dataset_df.drop('date', axis=1, inplace=True)
     # Get rid of 'close' column (not used as input)
-    final_dataset_df.drop('close', axis=1, inplace=True)
+    # final_dataset_df.drop('close', axis=1, inplace=True)
 
-    # Convert to tensor
-    data_tensor = torch.tensor(final_dataset_df.values, dtype=torch.float32)
+    # Save so we can check whether the formatting is correct
+    final_dataset_df.to_csv("current_dataset.csv", index=False)
+
     # Split data and labels
-    X = data_tensor[:, :-1]
-    y = data_tensor[:, -1]
+    y = torch.tensor(final_dataset_df['close'].values, dtype=torch.float32)
+    X = torch.tensor(final_dataset_df.values, dtype=torch.float32)  # All columns
 
     data_len = len(X)
     split_train = int(data_len * (data_splits[0] / 100))  # end index of train split
     split_valid = split_train + int(data_len * (data_splits[1] / 100))  # end index of validation split
 
-    train_data = LSTMDataset(date_array[:split_train], X[:split_train], y[:split_train], sequence_length)
-    val_data = LSTMDataset(date_array[split_train - sequence_length:split_valid], X[split_train - sequence_length:split_valid], y[split_train - sequence_length:split_valid], sequence_length)
-    test_data = LSTMDataset(date_array[split_valid - sequence_length:], X[split_valid - sequence_length:], y[split_valid - sequence_length:], sequence_length)
+    train_data = LSTMDataset(date_array[:split_train], X[:split_train], y[:split_train], sequence_length=sequence_length, stock_close_prices=stock_close_prices)
+    val_data = LSTMDataset(date_array[split_train - sequence_length:split_valid], X[split_train - sequence_length:split_valid], y[split_train - sequence_length:split_valid], sequence_length=sequence_length, stock_close_prices=stock_close_prices)
+    test_data = LSTMDataset(date_array[split_valid - sequence_length:], X[split_valid - sequence_length:], y[split_valid - sequence_length:], sequence_length=sequence_length, stock_close_prices=stock_close_prices)
 
     return train_data, val_data, test_data
 
