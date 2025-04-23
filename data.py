@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 
 # Define a custom dataset class
 class LSTMDataset(Dataset):
-    def __init__(self, dates, X, y, sequence_length=50, stock_close_prices=[], logger=None):
+    def __init__(self, dates, X, y, sequence_length=50, logger=None):
         """
         data: all the data (for the entire time period)
         """
@@ -19,7 +19,6 @@ class LSTMDataset(Dataset):
         self.sequence_length = sequence_length
         self.X = X
         self.y = y
-        self.stock_close_prices = stock_close_prices
         self.logger = logger
 
     def __len__(self):
@@ -50,9 +49,6 @@ class LSTMDataset(Dataset):
         y = torch.tensor(y, dtype=torch.float32)
         
         return x, y
-
-    def get_input_dim(self):
-        return self.X.shape[1]
 
 
 def DEPRECATED_get_stock_data(ticker_symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
@@ -89,6 +85,7 @@ def DEPRECATED_get_stock_data(ticker_symbol: str, start_date: str, end_date: str
 
     return data
 
+
 def DEPRECATED_create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert_sentiment.csv', sequence_length=50, data_splits=(70,20,10)):
     """Transform a time series into a prediction dataset
     
@@ -120,7 +117,7 @@ def DEPRECATED_create_dataset(tweet_data_src='data/sentiment/tweets_with_finbert
     split_valid = split_train+int(data_len * (data_splits[1]/100)) # end index of validation split
     return LSTMDataset(dataset[:split_train], sequence_length), LSTMDataset(dataset[split_train:split_valid], sequence_length), LSTMDataset(dataset[split_valid:], sequence_length)
 
-def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=50, data_splits=(70,20,10)):
+def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', sequence_length=50, data_splits=(70,20,10), new_dataset=False):
     # Define file paths (adjust these paths as necessary)
     stock_csv = 'data/stock/tsla.csv'
 
@@ -146,15 +143,10 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     dataset = pd.merge(stock_subset, sentiment_df, on='date', how='inner')
     dataset = pd.merge(dataset, y_values, on='date', how='inner')
 
-    # Get close prices (for plotting predictions later on)
-    stock_close_prices = dataset['close'].to_numpy()
-
     date_array = dataset['date'].to_numpy()
 
     # Get rid of 'date' column
     dataset.drop('date', axis=1, inplace=True)
-    # Get rid of 'close' column (not used as input)
-    dataset.drop('close', axis=1, inplace=True)
 
     # TODO: Temporarily don't use the prob_negative,prob_neutral,prob_positive columns
     dataset.drop('prob_negative', axis=1, inplace=True)
@@ -164,6 +156,37 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     # Save so we can check whether the formatting is correct
     dataset.to_csv("current_dataset.csv", index=False)
 
+    # Experiment With Different Merging Style
+    different = pd.merge(stock_subset, sentiment_df, on='date', how='left')
+    
+    # Fill Missing Dates with 0 Tweets as Sentiment Score = 0 and Text = 0
+    different['sentiment_score'] = different['sentiment_score'].fillna(0)
+    different['Text'] = different['Text'].fillna(0)
+
+    # Separate Dataset to Only Include Dates from First Twitter Data to Last Twitter Data
+    start_date = '2018-06-29'
+    end_date = sentiment_df['date'].max()
+    different = different[(different['date'] >= start_date) & (different['date'] <= end_date)]
+    diff_date_array = different['date'].to_numpy()
+
+    #Incorporate Y-Values in Dataset
+    different = pd.merge(different, y_values, on='date', how='inner')
+
+    # Get rid of 'date' column
+    different.drop('date', axis=1, inplace=True)
+
+    # TODO: Temporarily don't use the prob_negative,prob_neutral,prob_positive columns
+    different.drop('prob_negative', axis=1, inplace=True)
+    different.drop('prob_neutral', axis=1, inplace=True)
+    different.drop('prob_positive', axis=1, inplace=True)
+
+    different.to_csv("different_dataset.csv", index=False)
+    print(f"Minimum Date: {start_date}")
+    print(f"Maximum Date: {end_date}")
+
+    if (new_dataset):
+        dataset = different
+        date_array = diff_date_array
     # Convert to tensor
     data_tensor = torch.tensor(dataset.values, dtype=torch.float32)
     # Split data and labels
@@ -177,75 +200,6 @@ def create_dataset(tweet_data_src='data/sentiment/daily_sentiment_summary.csv', 
     train_data = LSTMDataset(date_array[:split_train], X[:split_train], y[:split_train], sequence_length)
     val_data = LSTMDataset(date_array[split_train-sequence_length:split_valid], X[split_train-sequence_length:split_valid], y[split_train-sequence_length:split_valid], sequence_length)
     test_data = LSTMDataset(date_array[split_valid-sequence_length:], X[split_valid-sequence_length:], y[split_valid-sequence_length:], sequence_length)
-
-    return train_data, val_data, test_data
-
-def create_dataset_vader(tweet_data_src='data/sentiment/daily_sentiment_summary_vader.csv', sequence_length=50, data_splits=(70,20,10)):
-    # Define file paths (adjust these paths as necessary)
-    stock_csv = 'data/stock/tsla.csv'
-
-    # Load the sentiment CSV file, parsing the 'date' column as datetime objects
-    sentiment_df = pd.read_csv(tweet_data_src, parse_dates=['day'])
-    sentiment_df.rename(columns={'day': 'date'}, inplace=True)
-
-    # Load the stock CSV file, also parsing the 'date' column
-    stock_df = pd.read_csv(stock_csv, parse_dates=['date'])
-
-    # Extract 'date', 'open', 'close' columns from the stock data
-    stock_subset = stock_df[['date', 'open', 'close', 'open_minmax', 'close_minmax']]
-    y_values = stock_df[['date', 'close']]  # We are predicting 'close' prices
-
-    # Merge using an inner join so that only rows with matching dates in both datasets remain.
-    dataset = pd.merge(stock_subset, sentiment_df, on='date', how='inner')
-    dataset = pd.merge(dataset, y_values, on='date', how='inner')
-
-    # Handle missing dates in the stock data (weekends, holidays, etc.)
-    final_dataset = []
-    last_sentiment = None  # To store the last valid sentiment for missing days
-    last_stock_data = None  # To store the last valid stock data for missing days
-    sentiment_count = 0  # To track the number of days without stock data
-
-    for idx, row in dataset.iterrows():
-        # If it's the first row or if stock data is available for this date, just append the row
-        if last_sentiment is None or not pd.isna(row['open_minmax']):
-            final_dataset.append(row)
-            last_sentiment = row[['sentiment_score', 'prob_negative', 'prob_neutral', 'prob_positive']].copy()
-            last_stock_data = row[['open', 'close', 'open_minmax', 'close_minmax']].copy()  # Include open and close prices
-            sentiment_count = 1  # Reset the count as we've encountered valid stock data
-        else:
-            # Average sentiment scores if the current day doesn't have stock data (weekend/holiday)
-            sentiment_count += 1
-            last_sentiment = (last_sentiment * (sentiment_count - 1) + row[['sentiment_score', 'prob_negative', 'prob_neutral', 'prob_positive']]) / sentiment_count
-            row[['sentiment_score', 'prob_negative', 'prob_neutral', 'prob_positive']] = last_sentiment
-            row[['open', 'close', 'open_minmax', 'close_minmax']] = last_stock_data  # Use the last available stock data
-            final_dataset.append(row)
-
-    # Convert final_dataset back to a DataFrame
-    final_dataset_df = pd.DataFrame(final_dataset)
-
-    # Get close prices (for plotting predictions later on)
-    stock_close_prices = final_dataset_df['close'].to_numpy()
-    date_array = final_dataset_df['date'].to_numpy()
-
-    # Get rid of 'date' column
-    final_dataset_df.drop('date', axis=1, inplace=True)
-    # Get rid of 'close' column (not used as input)
-    # final_dataset_df.drop('close', axis=1, inplace=True)
-
-    # Save so we can check whether the formatting is correct
-    final_dataset_df.to_csv("current_dataset.csv", index=False)
-
-    # Split data and labels
-    y = torch.tensor(final_dataset_df['close'].values, dtype=torch.float32)
-    X = torch.tensor(final_dataset_df.values, dtype=torch.float32)  # All columns
-
-    data_len = len(X)
-    split_train = int(data_len * (data_splits[0] / 100))  # end index of train split
-    split_valid = split_train + int(data_len * (data_splits[1] / 100))  # end index of validation split
-
-    train_data = LSTMDataset(date_array[:split_train], X[:split_train], y[:split_train], sequence_length=sequence_length, stock_close_prices=stock_close_prices)
-    val_data = LSTMDataset(date_array[split_train - sequence_length:split_valid], X[split_train - sequence_length:split_valid], y[split_train - sequence_length:split_valid], sequence_length=sequence_length, stock_close_prices=stock_close_prices)
-    test_data = LSTMDataset(date_array[split_valid - sequence_length:], X[split_valid - sequence_length:], y[split_valid - sequence_length:], sequence_length=sequence_length, stock_close_prices=stock_close_prices)
 
     return train_data, val_data, test_data
 
@@ -266,19 +220,6 @@ def _append_sentiment_analysis(dataset):
         dataset["scores_neu"] = analyzer.polarity_scores(t)["neu"]
         dataset["scores_compound"] = analyzer.polarity_scores(t)["compound"]
     return dataset
-
-def get_close_prices_from_percent_changes(y_true_close, y_pred_percent_change):
-    """
-    the dates for y_true_close should lag y_pred_percent_change by 1 day
-    """
-    assert len(y_true_close) == len(y_pred_percent_change)
-
-    y_pred_close = []
-    for i, y in enumerate(y_true_close):
-        y_pred_close.append(round(y*(1+y_pred_percent_change[i]), 2))
-
-    return y_pred_close
-
 
 def main():
     tweets = get_tweet_dataset("data/tweets/elon_musk_tweets.csv")
